@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Browse Nearby — FoodShare</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="../css/style.css?v=5">
+</head>
+<body>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="brand" href="../index.html">FoodShare</a>
+      <div class="nav-links">
+        <a class="btn btn-outline btn-sm nav-protected" href="donate.html" hidden>Donate Food</a>
+        <div id="auth-area"></div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-banner banner-browse">
+    <div class="page-banner-text">
+      <h2>Food available nearby</h2>
+      <p>Within 5km of your current location, nearest first.</p>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="two-col">
+      <div id="map"></div>
+      <div class="listings-column" id="listings"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/map.js"></script>
+  <script src="../js/nav.js?v=3"></script>
+  <script>
+    if (requireAuth("login.html", "browse.html")) {
+      initNavAuth("login.html", "../index.html");
+
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          initMap(latitude, longitude);
+          const listings = await api.listNearby(latitude, longitude);
+          plotListings(listings);
+          renderListings(listings);
+        },
+        () => {
+          initMap();
+          document.getElementById("listings").innerHTML =
+            '<div class="empty-state">Enable location access to see listings near you.</div>';
+        }
+      );
+    }
+
+    function renderListings(listings) {
+      const container = document.getElementById("listings");
+      if (!listings.length) {
+        container.innerHTML = '<div class="empty-state">No listings nearby right now — check back soon, or widen your search by donating one yourself.</div>';
+        return;
+      }
+      container.innerHTML = listings
+        .map((l) => {
+          const score = l.freshness_score != null ? Math.round(l.freshness_score * 100) : null;
+          return `
+        <div class="ticket">
+          <div class="ticket-main">
+            <h3>${l.title}</h3>
+            <p class="ticket-meta">${l.quantity} &middot; <span class="dist">${l.distance_km ?? "?"} km away</span></p>
+            <button class="btn btn-primary btn-sm" onclick="requestListing(${l.id})">Request pickup</button>
+          </div>
+          <div class="stamp">
+            <span>
+              <span class="stamp-score">${score !== null ? score + "%" : "N/A"}</span>
+              FRESH
+            </span>
+          </div>
+        </div>`;
+        })
+        .join("");
+    }
+
+    async function requestListing(listingId) {
+      try {
+        await api.createMatch({ listing_id: listingId });
+        alert("Request sent! The donor will be notified.");
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+  </script>
+</body>
+</html>

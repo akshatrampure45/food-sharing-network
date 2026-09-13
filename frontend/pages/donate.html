@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Donate Food — FoodShare</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="../css/style.css?v=5">
+</head>
+<body>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="brand" href="../index.html">FoodShare</a>
+      <div class="nav-links">
+        <a class="btn btn-outline btn-sm nav-protected" href="browse.html" hidden>Browse Nearby</a>
+        <div id="auth-area"></div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-banner banner-donate">
+    <div class="page-banner-text">
+      <h2>Donate surplus food</h2>
+      <p>Drop a pin where it can be picked up, then post the listing.</p>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="two-col">
+      <div class="form-card">
+        <form id="donate-form">
+          <div class="field">
+            <label for="title">Title</label>
+            <input type="text" id="title" placeholder="e.g. 20 veg meals" required>
+          </div>
+          <div class="field">
+            <label for="quantity">Quantity</label>
+            <input type="text" id="quantity" placeholder="e.g. 20 servings" required>
+          </div>
+          <div class="field">
+            <label for="photo_url">Photo URL</label>
+            <input type="text" id="photo_url" placeholder="S3 URL after upload (optional)">
+          </div>
+          <div class="field">
+            <label for="expiry_time">Expiry time</label>
+            <input type="datetime-local" id="expiry_time" required>
+          </div>
+          <p class="hint">Click on the map to set the pickup location.</p>
+          <input type="hidden" id="lat">
+          <input type="hidden" id="lng">
+          <p id="status-msg" class="status-msg"></p>
+          <button type="submit" class="btn btn-primary btn-block">Post Listing</button>
+        </form>
+      </div>
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/map.js"></script>
+  <script src="../js/nav.js?v=3"></script>
+  <script>
+    if (requireAuth("login.html", "donate.html")) {
+      initNavAuth("login.html", "../index.html");
+      initMap();
+      enablePinDrop((lat, lng) => {
+        document.getElementById("lat").value = lat;
+        document.getElementById("lng").value = lng;
+      });
+
+      document.getElementById("donate-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const statusEl = document.getElementById("status-msg");
+        const lat = parseFloat(document.getElementById("lat").value);
+        const lng = parseFloat(document.getElementById("lng").value);
+        if (!lat || !lng) {
+          statusEl.textContent = "Please click the map to set a location.";
+          statusEl.className = "status-msg err";
+          return;
+        }
+        try {
+          await api.createListing({
+            title: document.getElementById("title").value,
+            quantity: document.getElementById("quantity").value,
+            photo_url: document.getElementById("photo_url").value || null,
+            expiry_time: new Date(document.getElementById("expiry_time").value).toISOString(),
+            lat, lng,
+          });
+          statusEl.textContent = "Listing posted.";
+          statusEl.className = "status-msg ok";
+          e.target.reset();
+        } catch (err) {
+          statusEl.textContent = err.message;
+          statusEl.className = "status-msg err";
+        }
+      });
+    }
+  </script>
+</body>
+</html>

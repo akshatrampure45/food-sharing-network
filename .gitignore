@@ -1,0 +1,5 @@
+﻿venv/
+foodshare.db
+.env
+__pycache__/
+*.pyc
