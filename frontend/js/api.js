@@ -1,5 +1,5 @@
 // Point this at your backend (local FastAPI dev server, or Render/EC2 URL in production)
-const API_BASE = "http://localhost:8000";
+const API_BASE = "https://food-sharing-network-backend.onrender.com";
 
 function authHeader() {
   const token = localStorage.getItem("access_token");
